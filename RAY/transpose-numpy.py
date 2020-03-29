@@ -142,9 +142,6 @@ class transpose(threading.Thread):
                 blk = (l+self.my_id) % self.n
                 row = blk*self.block_order
                 if blk == self.my_id:
-                    # this actually forms the transpose of A
-                    # B += numpy.transpose(A)
-                    # this only uses the transpose _view_ of A
                     self.B[:, row:row+self.block_order] += self.A[:, row:row+self.block_order].T
                 else:
                     rem_ops.append ( self.robjs[blk].handle_block.remote( self.my_id, self.A[:, row:row+self.block_order]) )
@@ -238,8 +235,10 @@ def main():
 
     t0 = time.time()  # wall-clock time
     ray.get([x.start.remote() for x in robjs])
+    # poll to see if all are done
     while sum(ray.get([x.is_alive.remote() for x in robjs]))>0:
         time.sleep(1)
+    # get results (times measured by run() on each worker)
     fut_times = [x.wait_end.remote() for x in robjs]
     trans_time = max(ray.get(fut_times))
     t1 = time.time()
