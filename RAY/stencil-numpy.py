@@ -215,9 +215,9 @@ class stencil(threading.Thread):
         self.sent_data[n].append(d)
         self.data_ready[n].release()
 
-    # NOTE: this is a local call
-    def waitsend(self, n):
-        self.ok_to_send[n].acquire()
+    ## NOTE: this is a local call
+    #def waitsend(self, n):
+    #    self.ok_to_send[n].acquire()
 
     # NOTE: this is a local call
     def recv(self, n):
@@ -358,7 +358,9 @@ def main():
         print('Solution validates')
         flops = (2*stencil_size+1) * active_points
         avgtime = stencil_time/iterations
-        print('Rate (MFlops/s): ',1.e-6*flops/avgtime, ' Avg time (s): ',avgtime)
+        avgtime2 = stencil_time2/iterations
+        print('Rate (MFlops/s): ',1.e-6*flops/avgtime, ' Avg time (s): ',avgtime,'(max worker)')
+        print('Rate (MFlops/s): ',1.e-6*flops/avgtime2, ' Avg time (s): ',avgtime2,'(wall-clock)')
     else:
         print('ERROR: L1 norm = ', norm,' Reference L1 norm = ', reference_norm)
         sys.exit()
