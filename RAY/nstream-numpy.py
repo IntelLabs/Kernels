@@ -137,8 +137,8 @@ def main():
     if iterations < 1:
         sys.exit("ERROR: iterations must be >= 1")
 
-    length = int(sys.argv[2])
-    if length < 1:
+    total_length = int(sys.argv[2])
+    if total_length < 1:
         sys.exit("ERROR: length must be positive")
 
     #offset = int(sys.argv[3])
@@ -152,9 +152,12 @@ def main():
         sys.exit("ERROR: Num workers must be >=1")
     if nworkers>cores:
         sys.exit("ERROR: Too many workers requested")
+    if nworkers>total_length:
+        sys.exit("ERROR: Length must be at least number of workers")
+    length = total_length//nworkers
 
     print('Number of iterations = ', iterations)
-    print('Vector length        = ', length)
+    print('Vector length        = ', length*nworkers)
     print('Number of workers    = ', nworkers)
     #print('Offset               = ', offset)
 
