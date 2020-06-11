@@ -66,7 +66,7 @@
 import sys
 print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
 if sys.version_info >= (3, 3):
-    from time import process_time as timer
+    from time import perf_counter as timer
 else:
     from timeit import default_timer as timer
 import numpy
@@ -114,7 +114,7 @@ def main():
 
     for k in range(0,iterations+1):
 
-        if k<1: t0 = timer()
+        if k==1: t0 = timer()
 
         A += B + scalar * C
 
