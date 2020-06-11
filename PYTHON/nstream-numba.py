@@ -66,9 +66,10 @@
 import sys
 print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
 if sys.version_info >= (3, 3):
-    from time import process_time as timer
+    from time import perf_counter as timer
 else:
     from timeit import default_timer as timer
+import time
 import numpy
 print('Numpy version  = ', numpy.version.version)
 import numba
@@ -115,16 +116,14 @@ def main():
     scalar = 3.0
 
     @numba.njit(parallel=True)
-    def do_it(A,B,C,scalar):
-        for i in numba.prange(A.shape[0]):
-            A[i]+=B[i] + scalar*C[i]
+    def do_it(A,B,C,scalar,iters):
+        for k in range(iters):
+            for i in numba.prange(A.shape[0]):
+                A[i]+=B[i] + scalar*C[i]
 
-    for k in range(0,iterations+1):
-
-        if k==1: t0 = timer()
-
-        do_it(A,B,C,scalar)
-        #A += B + scalar * C
+    do_it(A,B,C,scalar,1)    
+    t0 = timer()
+    do_it(A,B,C,scalar,iterations)
 
 
     t1 = timer()
