@@ -129,7 +129,7 @@ def main():
     @numba.njit(parallel=True)
     def do_it(grid, m, n, iters):
         nw = numba.get_num_threads()
-        bs = 5*nw
+        bs = 100 #m//(4*nw)+1
         for k in range(iters):
             for ii in range((m+bs-1)//bs+nw-1):
                 for w in numba.prange(nw):
