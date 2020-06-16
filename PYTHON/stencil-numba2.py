@@ -139,58 +139,42 @@ def main():
     A = numpy.fromfunction(lambda i,j: i+j, (n,n), dtype=float)
     B = numpy.zeros((n,n))
 
-    @numba.stencil(standard_indexing=("W",))
-    def star2(A,W):
-        return  W[2,2] * A[0,0] \
-              + W[2,0] * A[0,-2] \
-              + W[2,1] * A[0,-1] \
-              + W[2,3] * A[0,1] \
-              + W[2,4] * A[0,2] \
-              + W[0,2] * A[-2,0] \
-              + W[1,2] * A[-1,0] \
-              + W[3,2] * A[1,0] \
-              + W[4,2] * A[2,0]
-    @numba.njit(parallel=True)
-    def do_star2(A,B,W,iters):
-        for k in range(iters):
-            B += star2(A,W)
-            A += 1.0
-
     @numba.njit(parallel=True)
     def do_star(A,B,W,r,n,iters):
-        b = n-r
         for k in range(iters):
-            B[r:b,r:b] += W[r,r] * A[r:b,r:b]
-            for s in range(1,r+1):
-                B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s] \
-                            + W[r,r+s] * A[r:b,r+s:b+s] \
-                            + W[r-s,r] * A[r-s:b-s,r:b] \
-                            + W[r+s,r] * A[r+s:b+s,r:b]
-            A += 1.0
+            for i in numba.prange(r,n-r):
+                for j in range(r,n-r):
+                    for jj in range(-r,r+1):
+                        B[i,j] += W[r,r+jj] * A[i,j+jj]
+                    for ii in range(-r,0):
+                        B[i,j] += W[r+ii,r] * A[i+ii,j]
+                    for ii in range(1,r+1):
+                        B[i,j] += W[r+ii,r] * A[i+ii,j]
+        for i in numba.prange(n):
+            for j in range(n):
+                A[i,j] += 1.0
 
     @numba.njit(parallel=True)
     def do_sten(A,B,W,r,n,iters):
-        b = n-r
         for k in range(iters):
-            if r>0:
-                for s in range(-r, r+1):
-                    for t in range(-r, r+1):
-                        B[r:b,r:b] += W[r+t,r+s] * A[r+t:b+t,r+s:b+s]
-            A += 1.0
+            for i in numba.prange(r,n-r):
+                for j in range(r,n-r):
+                    for ii in range(-r,r+1):
+                        for jj in range(-r,r+1):
+                            B[i,j] += W[r+ii,r+jj] * A[i+ii,j+jj]
+        for i in numba.prange(n):
+            for j in range(n):
+                A[i,j] += 1.0
 
-    if pattern == 'star' and r==2:
-        do_star2(A,B,W,1)
-        t0=timer()
-        do_star2(A,B,W,iterations)
-    elif pattern=='star':
+    if pattern == 'star':
         do_star(A,B,W,r,n,1)
-        t0=timer()
-        do_star(A,B,W,r,n,iterations)
     else:
         do_sten(A,B,W,r,n,1)
-        t0=timer()
+    t0 = timer()
+    if pattern == 'star':
+        do_star(A,B,W,r,n,iterations)
+    else:
         do_sten(A,B,W,r,n,iterations)
-
     t1 = timer()
     stencil_time = t1 - t0
 

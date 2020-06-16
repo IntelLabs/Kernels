@@ -48,6 +48,7 @@
 #
 # HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 #          - Converted to Python by Jeff Hammond, February 2016.
+#          - Numba version by Babu Pillai, June 2020.
 #
 # *******************************************************************
 
@@ -60,12 +61,8 @@ else:
 import numpy
 print('Numpy version  = ', numpy.version.version)
 import numba
+print('Numba version  = ', numba.__version__)
 
-@jit
-def iterate_over_grid(grid, m, n):
-    for i in range(1,m):
-        for j in range(1,n):
-            grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
 
 def main():
 
@@ -88,7 +85,7 @@ def main():
     if m < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 
-    n = int(sys.argv[2])
+    n = int(sys.argv[3])
     if n < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 
@@ -99,17 +96,52 @@ def main():
     grid[0,:] = list(range(n))
     grid[:,0] = list(range(m))
 
-    for k in range(iterations+1):
-        # start timer after a warmup iteration
-        if k==1:
-            t0 = timer()
+    #@numba.njit(parallel=True)
+    #def do_it(grid, m, n, iters):
+    #    nw = numba.get_num_threads()
+    #    flags = [ False for i in range(nw) ]
+    #    for k in range(iters):
+    #        for w in numba.prange(nw):
+    #            for i in range(1,m):
+    #                if w>0:
+    #                    f = False
+    #                    while not f: f=flags[w-1]
+    #                    flags[w-1]=False
+    #                for j in range(max(1,w*n//nw),(w+1)*n//nw):
+    #                    grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
+    #                if w<nw-1:
+    #                    f = True
+    #                    while f: f=flags[w]
+    #                    flags[w]=True
+    #        grid[0,0] = -grid[m-1,n-1]
 
-        iterate_over_grid(grid, m, n)
+    #@numba.njit(parallel=True)
+    #def do_it(grid, m, n, iters):
+    #    nw = numba.get_num_threads()
+    #    for k in range(iters):
+    #        for i in range(1,m+nw-1):
+    #            for w in numba.prange(nw):
+    #                if i-w>0 and i-w<m:
+    #                    for j in range(max(1,w*n//nw),(w+1)*n//nw):
+    #                        grid[i-w,j] = grid[i-w-1,j] + grid[i-w,j-1] - grid[i-w-1,j-1]
+    #        grid[0,0] = -grid[m-1,n-1]
 
-        # copy top right corner value to bottom left corner to create dependency
-        grid[0,0] = -grid[m-1,n-1]
+    @numba.njit(parallel=True)
+    def do_it(grid, m, n, iters):
+        nw = numba.get_num_threads()
+        bs = 5*nw
+        for k in range(iters):
+            for ii in range((m+bs-1)//bs+nw-1):
+                for w in numba.prange(nw):
+                    for i in range((ii-w)*bs,(ii-w+1)*bs):
+                            if i>0 and i<m:
+                                for j in range(max(1,w*n//nw),(w+1)*n//nw):
+                                    grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
+            grid[0,0] = -grid[m-1,n-1]
 
-
+    do_it(grid, m, n, 1)
+    t0 = timer()
+    do_it(grid, m, n, iterations)
     t1 = timer()
     pipeline_time = t1 - t0
 

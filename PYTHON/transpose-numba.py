@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2017, Intel Corporation
+# Copyright (c) 2015, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,36 +32,22 @@
 
 #*******************************************************************
 #
-# NAME:    nstream
+# NAME:    transpose
 #
-# PURPOSE: To compute memory bandwidth when adding a vector of a given
-#          number of double precision values to the scalar multiple of
-#          another vector of the same length, and storing the result in
-#          a third vector.
+# PURPOSE: This program measures the time for the transpose of a
+#          column-major stored matrix into a row-major stored matrix.
 #
-# USAGE:   The program takes as input the number
-#          of iterations to loop over the triad vectors, the length of the
-#          vectors, and the offset between vectors
+# USAGE:   Program input is the matrix order and the number of times to
+#          repeat the operation:
 #
-#          <progname> <# iterations> <vector length> <offset>
+#          transpose <# iterations> <matrix_size>
 #
 #          The output consists of diagnostics to make sure the
-#          algorithm worked, and of timing statistics.
+#          transpose worked and timing statistics.
 #
-# NOTES:   Bandwidth is determined as the number of words read, plus the
-#          number of words written, times the size of the words, divided
-#          by the execution time. For a vector length of N, the total
-#          number of words read and written is 4*N*sizeof(double).
-#
-#
-# HISTORY: This code is loosely based on the Stream benchmark by John
-#          McCalpin, but does not follow all the Stream rules. Hence,
-#          reported results should not be associated with Stream in
-#          external publications
-#
-#          Converted to Python by Jeff Hammond, October 2017.
+# HISTORY: Written by  Rob Van der Wijngaart, February 2009.
+#          Converted to Python by Jeff Hammond, February 2016.
 #          Numba version by Babu Pillai, June 2020.
-#
 # *******************************************************************
 
 import sys
@@ -70,7 +56,6 @@ if sys.version_info >= (3, 3):
     from time import perf_counter as timer
 else:
     from timeit import default_timer as timer
-import time
 import numpy
 print('Numpy version  = ', numpy.version.version)
 import numba
@@ -83,79 +68,61 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python Numpy STREAM triad: A = B + scalar * C')
+    print('Python Numpy Matrix transpose: B = A^T')
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: python nstream.py <# iterations> <vector length>")
+        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
         sys.exit("ERROR: iterations must be >= 1")
 
-    length = int(sys.argv[2])
-    if length < 1:
-        sys.exit("ERROR: length must be positive")
-
-    #offset = int(sys.argv[3])
-    #if offset < 0:
-    #    sys.exit("ERROR: offset must be nonnegative")
+    order = int(sys.argv[2])
+    if order < 1:
+        sys.exit("ERROR: order must be >= 1")
 
     print('Number of iterations = ', iterations)
-    print('Vector length        = ', length)
-    #print('Offset               = ', offset)
+    print('Matrix order         = ', order)
 
     # ********************************************************************
-    # ** Allocate space for the input and execute STREAM triad
+    # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    # 0.0 is a float, which is 64b (53b of precision)
-    A = numpy.zeros(length)
-    B = numpy.full(length,2.0)
-    C = numpy.full(length,2.0)
-
-    scalar = 3.0
+    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+    B = numpy.zeros((order,order))
 
     @numba.njit(parallel=True)
-    def do_it(A,B,C,scalar,iters):
-        for k in range(iters):
+    def do_it(A,B,iters):
+        for k in range(0,iters):
             for i in numba.prange(A.shape[0]):
-                A[i]+=B[i] + scalar*C[i]
-
-    do_it(A,B,C,scalar,1)    
-    t0 = timer()
-    do_it(A,B,C,scalar,iterations)
+                for j in range(A.shape[0]):
+                    B[i,j] += A[j,i]
+                    A[j,i] += 1.0
 
 
+    do_it(A,B,1)
+    t0=timer()
+    do_it(A,B,iterations)
     t1 = timer()
-    nstream_time = t1 - t0
+    trans_time = t1 - t0
 
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    ar = 0.0
-    br = 2.0
-    cr = 2.0
-    ref = 0.0
-    for k in range(0,iterations+1):
-        ar += br + scalar * cr
-
-    ar *= length
-
-    asum = numpy.linalg.norm(A, ord=1)
+    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
 
     epsilon=1.e-8
-    if abs(ar-asum)/asum > epsilon:
-        print('Failed Validation on output array');
-        print('        Expected checksum: ',ar);
-        print('        Observed checksum: ',asum);
-        sys.exit("ERROR: solution did not validate")
-    else:
+    nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+    if abserr < epsilon:
         print('Solution validates')
-        avgtime = nstream_time/iterations
-        nbytes = 4.0 * length * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+        avgtime = trans_time/iterations
         print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
+    else:
+        print('error ',abserr, ' exceeds threshold ',epsilon)
+        sys.exit("ERROR: solution did not validate")
 
 
 if __name__ == '__main__':
