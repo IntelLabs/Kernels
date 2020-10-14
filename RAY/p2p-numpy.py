@@ -155,7 +155,7 @@ def main():
     if ray_redis_pass==None:
     	ray_redis_pass = ""
     try:
-    	ray.init(address=ray_address, redis_password=ray_redis_pass)
+    	ray.init(address=ray_address, _redis_password=ray_redis_pass)
     except:
     	ray.init()
     assert ray.is_initialized() == True
