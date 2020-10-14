@@ -194,7 +194,7 @@ int main(int argc, char ** argv) {
         for (jt=j; jt<MIN(order,j+Tile_order);jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++){
             A(it,jt) = (double) (order*jt + it);
-            B(it,jt) = 0.0;
+            B(jt,it) = 0.0;
           }
   }
   else {
@@ -202,7 +202,7 @@ int main(int argc, char ** argv) {
     for (j=0;j<order;j++) 
       for (i=0;i<order; i++) {
         A(i,j) = (double) (order*j + i);
-        B(i,j) = 0.0;
+        B(j,i) = 0.0;
       }
   }
 
@@ -228,9 +228,9 @@ int main(int argc, char ** argv) {
     }
     else {
 #if COLLAPSE
-      #pragma omp for collapse(2)
+      #pragma omp for collapse(2) nowait
 #else
-      #pragma omp for
+      #pragma omp for nowait
 #endif
       for (i=0; i<order; i+=Tile_order) 
         for (j=0; j<order; j+=Tile_order) 
