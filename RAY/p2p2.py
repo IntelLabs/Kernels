@@ -64,7 +64,7 @@ import time
 import ray
 import os
 
-@ray.remote
+@ray.remote(num_cpus=1)
 class pipeline():
     def __init__(self, my_id):
         self.my_id = my_id

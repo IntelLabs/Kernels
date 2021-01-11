@@ -64,7 +64,7 @@ import ray
 import os
 import threading
 
-@ray.remote
+@ray.remote(num_cpus=1)
 class pipeline(threading.Thread):
     def __init__(self, my_id):
         threading.Thread.__init__(self)

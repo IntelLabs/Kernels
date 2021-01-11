@@ -108,7 +108,7 @@ import ray
 import os
 import threading
 
-@ray.remote
+@ray.remote(num_cpus=1)
 class transpose(threading.Thread):
     def __init__(self, my_id):
         threading.Thread.__init__(self)

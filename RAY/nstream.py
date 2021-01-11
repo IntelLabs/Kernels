@@ -79,7 +79,7 @@ import time
 import ray
 import os
 
-@ray.remote
+@ray.remote(num_cpus=1)
 class nstream:
     def __init__(self, length):
         # 0.0 is a float, which is 64b (53b of precision)

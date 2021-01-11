@@ -75,7 +75,7 @@ def factor(n):
         if n%i==0:
             return i, int(n/i)
 
-@ray.remote
+@ray.remote(num_cpus=1)
 class stencil(threading.Thread):
     def __init__(self, my_id):
         threading.Thread.__init__(self)
