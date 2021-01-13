@@ -205,10 +205,10 @@ def main():
     # ** Run iterations.
     # ********************************************************************
 
-    t0 = time.time()  # wall-clock time
     for i in range(iterations+1):
         if (i==1):
-            [x.start_time.remote() for x in robjs]
+            ray.get([x.start_time.remote() for x in robjs])
+            t0 = time.time()  # wall-clock time
         for b in range(numbatches):
             js = batch*b+1
             for k in range(nworkers):
@@ -235,7 +235,7 @@ def main():
     if (abs(grid_val - corner_val)/corner_val) < epsilon:
         print('Solution validates')
         avgtime = pipeline_time/iterations
-        avgtime2 = pipeline_time2/(iterations+1)
+        avgtime2 = pipeline_time2/iterations
         print('Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime,' Avg time (s): ',avgtime, "(max worker)")
         print('Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime2,' Avg time (s): ',avgtime2, "(wall-clock)")
     else:

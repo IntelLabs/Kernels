@@ -183,10 +183,10 @@ def main():
     # ** Run iterations.
     # ********************************************************************
 
-    t0 = time.time()  # wall-clock time
     for i in range(iterations+1):
         if (i==1):
-            [x.start_time.remote() for x in robjs]
+            ray.get([x.start_time.remote() for x in robjs])
+            t0 = time.time()  # wall-clock time
         [x.run_step.remote() for x in robjs]
     fut_times = [x.wait_end.remote() for x in robjs]
     t2 = time.time()
@@ -218,7 +218,7 @@ def main():
     else:
         print('Solution validates')
         avgtime = nstream_time/iterations
-        avgtime2 = nstream_time2/(iterations+1)
+        avgtime2 = nstream_time2/iterations
         nbytes = 4.0 * length * nworkers * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
         print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
         print('Rate (MB/s): ',1.e-6*nbytes/avgtime2, ' Avg time (s): ', avgtime2)

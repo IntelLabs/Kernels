@@ -290,10 +290,10 @@ def main():
     # ** Run iterations.
     # ********************************************************************
 
-    t0 = time.time()  # wall-clock time
     for i in range(iterations+1):
         if (i==1):
-            [x.start_time.remote() for x in robjs]
+            ray.get([x.start_time.remote() for x in robjs])
+            t0 = time.time()  # wall-clock time
         # Comm phase
         L = [[robjarr[y][x].get_data.remote(0) for x in range(1,nwx)]+[0] for y in range(nwy)]
         R = [[0]+[robjarr[y][x].get_data.remote(1) for x in range(nwx-1)] for y in range(nwy)]

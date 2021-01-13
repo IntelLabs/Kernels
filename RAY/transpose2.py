@@ -222,10 +222,10 @@ def main():
     # ** Run iterations.
     # ********************************************************************
 
-    t0 = time.time()  # wall-clock time
     for i in range(iterations+1):
         if (i==1):
-            [x.start_time.remote() for x in robjs]
+            ray.get([x.start_time.remote() for x in robjs])
+            t0 = time.time()  # wall-clock time
         blocks = [[y.get_block.remote(i) for y in robjs] for i in range(nworkers)]
         [x.run_step.remote( blocks[i] ) for i,x in enumerate(robjs)]
     # get results (times measured by run() on each worker)
@@ -248,7 +248,7 @@ def main():
     if abserr < epsilon:
         print('Solution validates')
         avgtime = trans_time/iterations
-        avgtime2 = trans_time2/(iterations+1)
+        avgtime2 = trans_time2/iterations
         print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime, '(max worker)')
         print('Rate (MB/s): ',1.e-6*nbytes/avgtime2, ' Avg time (s): ', avgtime2, '(wall-clock)')
     else:

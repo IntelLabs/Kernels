@@ -358,7 +358,7 @@ def main():
         print('Solution validates')
         flops = (2*stencil_size+1) * active_points
         avgtime = stencil_time/iterations
-        avgtime2 = stencil_time2/iterations
+        avgtime2 = stencil_time2/(iterations+1)
         print('Rate (MFlops/s): ',1.e-6*flops/avgtime, ' Avg time (s): ',avgtime,'(max worker)')
         print('Rate (MFlops/s): ',1.e-6*flops/avgtime2, ' Avg time (s): ',avgtime2,'(wall-clock)')
     else:
