@@ -70,9 +70,9 @@ def main():
     print('Parallel Research Kernels version ') #, PRKVERSION
     print('Python Numpy Matrix transpose: B = A^T')
 
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in [3,4]:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
+        sys.exit("Usage: ./transpose <# iterations> <matrix order> [<N,R,C>]")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
@@ -81,9 +81,13 @@ def main():
     order = int(sys.argv[2])
     if order < 1:
         sys.exit("ERROR: order must be >= 1")
+    style = 0
+    if len(sys.argv)==4:
+        style = {"N":2, "R":0, "C":1}[sys.argv[3]]
 
     print('Number of iterations = ', iterations)
     print('Matrix order         = ', order)
+    print('style (0=row, 1=column, 2=numpy) = ', style)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
@@ -93,17 +97,28 @@ def main():
     B = numpy.zeros((order,order))
 
     @numba.njit(parallel=True)
-    def do_it(A,B,iters):
-        for k in range(0,iters):
-            for i in numba.prange(A.shape[0]):
-                for j in range(A.shape[0]):
-                    B[i,j] += A[j,i]
-                    A[j,i] += 1.0
+    def do_it(A,B,iters, style):
+        if style==0:
+            for k in range(0,iters):
+                for i in numba.prange(A.shape[0]):
+                    for j in range(A.shape[0]):
+                        B[i,j] += A[j,i]
+                        A[j,i] += 1.0
+        elif style==1:
+            for k in range(0,iters):
+                for i in numba.prange(A.shape[0]):
+                    for j in range(A.shape[0]):
+                        B[j,i] += A[i,j]
+                        A[i,j] += 1.0
+        else:
+            for k in range(0,iters):
+                B += A.T
+                A += 1.0
 
 
-    do_it(A,B,1)
+    do_it(A,B,1, style)
     t0=timer()
-    do_it(A,B,iterations)
+    do_it(A,B,iterations, style)
     t1 = timer()
     trans_time = t1 - t0
 

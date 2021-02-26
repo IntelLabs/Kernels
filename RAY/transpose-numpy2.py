@@ -132,7 +132,10 @@ class transpose():
         #print(time.time(),self.my_id,"run_step",blocks)
         for i, blk in enumerate(blocks):
             row = i*self.block_order
-            self.B[:, row:row+self.block_order] += ray.get(blk).T
+            if (i==self.my_id):
+                self.B[:, row:row+self.block_order] += self.A[:,row:row+self.block_order].T
+            else:
+                self.B[:, row:row+self.block_order] += ray.get(blk).T
         self.A += 1.0
 
     def get_block(self, block_id):
@@ -224,7 +227,7 @@ def main():
         if (i==1):
             ray.get([x.start_time.remote() for x in robjs])
             t0 = time.time()  # wall-clock time
-        blocks = [[y.get_block.remote(i) for y in robjs] for i in range(nworkers)]
+        blocks = [[0 if i==j else y.get_block.remote(i) for j,y in enumerate(robjs)] for i in range(nworkers)]
         [x.run_step.remote( blocks[i] ) for i,x in enumerate(robjs)]
     # get results (times measured by run() on each worker)
     fut_times = [x.wait_end.remote() for x in robjs]
